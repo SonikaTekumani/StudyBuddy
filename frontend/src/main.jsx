@@ -1,26 +1,40 @@
 // frontend/src/main.jsx
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-//import PlannerPage from './pages/PlannerPage';
+
+import ChatBot from './pages/ChatBot';
+import DashboardPage from './pages/DashboardPage';
 import PlannerNeatPlain from './pages/PlannerNeatPlain';
+import TopNav from './components/TopNav';
+
 import './index.css';
+import './pages/dashboard.css';
+import './pages/planner-neat.css';
+import './components/topnav.css';
 
 const queryClient = new QueryClient();
 
-createRoot(document.getElementById('root')).render(
+function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <TopNav />
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/planner" element={<PlannerNeatPlain />} />
+        <Route path="/chat" element={<ChatBot />} />
+        {/* add more routes here as needed */}
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <PlannerNeatPlain />
+      <AppRoutes />
     </QueryClientProvider>
   </React.StrictMode>
 );
-
-//createRoot(document.getElementById('root')).render(
-  //<React.StrictMode>
-    //<QueryClientProvider client={queryClient}>
-      //<PlannerPage />
-    //</QueryClientProvider>
-  //</React.StrictMode>
-//);
-

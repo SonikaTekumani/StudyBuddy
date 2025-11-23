@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import './dashboard.css';
+import FocusMode from '../components/FocusMode';
+import { useNavigate } from 'react-router-dom';
 import { getPlanner, getProgressSummary, getNotifications, getUserMe } from '../api';
 
-// Use your uploaded screenshot (local path)
-const HERO_IMAGE = '/mnt/data/Screenshot 2025-11-23 112535.png';
+// Use your uploaded screenshot (local path or URL)
+const HERO_IMAGE = 'https://i.pinimg.com/736x/f3/87/c0/f387c01af1045290530dc779dcb64c3d.jpg';
 
-function NextActionCard({ nextTask, onStart }) {
+function NextActionCard({ nextTask, onStart, onOpenPlanner }) {
   if (!nextTask) {
     return (
       <div className="dash-card next-action empty">
@@ -35,7 +37,7 @@ function NextActionCard({ nextTask, onStart }) {
 
       <div className="na-actions">
         <button className="btn primary" onClick={() => onStart(nextTask)}>Start Focus</button>
-        <button className="btn ghost" onClick={() => window.location.assign('/planner')}>Open Planner</button>
+        <button className="btn ghost" onClick={() => onOpenPlanner(nextTask)}>Open Planner</button>
       </div>
     </div>
   );
@@ -129,17 +131,24 @@ export default function DashboardPage() {
   const notifications = notificationsData?.notifications || notificationsData || [];
 
   const [focusTask, setFocusTask] = useState(null);
+  const navigate = useNavigate();
 
   const handleStartFocus = (task) => {
-    setFocusTask(task || nextTask || (planner.tasks && planner.tasks[0]) || null);
+    // prefer the passed task -> nextTask -> first planner task
+    const candidate = task || nextTask || (planner.tasks && planner.tasks[0]) || null;
+    if (!candidate) {
+      alert('No task available. Open Planner to add a task first.');
+      return;
+    }
+    setFocusTask(candidate);
   };
 
   const openPlannerOnNotif = (notif) => {
     // if notif has link / taskId try deep-link; else open planner page
     if (notif?.taskId) {
-      window.location.assign(`/planner?task=${notif.taskId}`);
+      navigate(`/planner?task=${notif.taskId}`);
     } else {
-      window.location.assign('/planner');
+      navigate('/planner');
     }
   };
 
@@ -167,7 +176,11 @@ export default function DashboardPage() {
 
       <div className="dash-grid">
         <div className="col-main">
-          <NextActionCard nextTask={nextTask} onStart={handleStartFocus} />
+          <NextActionCard
+            nextTask={nextTask}
+            onStart={handleStartFocus}
+            onOpenPlanner={() => navigate('/planner')}
+          />
 
           <div className="dash-row">
             <div className="col-left">
@@ -184,7 +197,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="today-actions">
                         <button className="link" onClick={() => setFocusTask(t)}>Focus</button>
-                        <button className="link" onClick={() => window.location.assign(`/planner?task=${t._id}`)}>Open</button>
+                        <button className="link" onClick={() => navigate(`/planner?task=${t._id}`)}>Open</button>
                       </div>
                     </div>
                   ))}
@@ -208,10 +221,8 @@ export default function DashboardPage() {
           <div className="card">
             <div className="card-head"><strong>Quick Actions</strong></div>
             <div className="quick-actions">
-              <button className="btn ghost" onClick={() => window.location.assign('/chat')}>Ask Study Buddy</button>
-              <button className="btn ghost" onClick={() => window.location.assign('/learn')}>Take Quiz</button>
-              <button className="btn ghost" onClick={() => qc.invalidateQueries('planner')}>Regenerate Plan</button>
-              <button className="btn ghost" onClick={() => window.location.assign('/planner')}>Open Planner</button>
+              <button className="btn ghost" onClick={() => navigate('/chat')}>Ask Study Buddy</button>
+              <button className="btn ghost" onClick={() => navigate('/planner')}>Open Planner</button>
             </div>
           </div>
 
@@ -225,7 +236,7 @@ export default function DashboardPage() {
                 <div className="profile-name">{user.name}</div>
                 <div className="profile-sub">{user.goals?.join(', ') || 'No goals set'}</div>
                 <div style={{ marginTop: 8 }}>
-                  <button className="btn ghost" onClick={() => window.location.assign('/auth')}>Edit Profile</button>
+                  <button className="btn ghost" onClick={() => navigate('/auth')}>Edit Profile</button>
                 </div>
               </div>
             </div>
@@ -236,7 +247,12 @@ export default function DashboardPage() {
 
       {/* Focus Mode mount spot (use the same FocusMode component you already added) */}
       {focusTask && (
-        <div id="focus-mount"></div>
+        <FocusMode
+          task={focusTask}
+          plannerId={planner._id}
+          onClose={() => setFocusTask(null)}
+          onSessionEnd={() => { qc.invalidateQueries('planner'); setFocusTask(null); }}
+        />
       )}
     </div>
   );
